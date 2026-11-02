@@ -1,0 +1,30 @@
+tmp/
+# 第三方组件（idf 自动下载）不入库；自研的 pet_anim 组件要留
+components/*
+!components/pet_anim/
+managed_components/
+build/
+dist/
+.vscode/
+.devcontainer/
+sdkconfig.old
+sdkconfig
+dependencies.lock
+.env
+releases/
+main/assets/lang_config.h
+main/mmap_generate_emoji.h
+.DS_Store
+.cache
+*.pyc
+*.bin
+mmap_generate_*.h
+.clangd
+
+# 服务端运行时产物（含真实 api_key / 账号密码 / 生成的视频，不入库）
+server/config.json
+server/storage/
+server/frames/
+server/.venv/
+__pycache__/
+*.pyc

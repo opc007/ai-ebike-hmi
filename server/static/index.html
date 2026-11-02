@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>给爱车领一只宠物</title>
+<style>
+  :root{
+    --bg:#F6F6F3; --card:#FFFFFF; --line:#E4E4DE;
+    --ink:#1A1A18; --ink2:#6B6B66; --ink3:#9A9A94;
+    --brand:#1D9E75; --brand-dark:#0F6E56; --brand-soft:#E1F5EE;
+    --danger:#C0392B; --amber:#B4801B;
+    --r:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.6;
+    -webkit-font-smoothing:antialiased; padding:32px 20px 60px;
+  }
+  .wrap{max-width:1060px;margin:0 auto}
+  header{margin-bottom:28px}
+  h1{font-size:26px;font-weight:600;letter-spacing:-.4px;margin-bottom:6px}
+  .sub{font-size:14px;color:var(--ink2)}
+  .layout{display:grid;grid-template-columns:1fr 480px;gap:24px;align-items:start}
+  @media(max-width:980px){.layout{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px}
+  .card + .card{margin-top:16px}
+  .sec-title{font-size:13px;font-weight:600;color:var(--ink3);letter-spacing:.5px;margin-bottom:16px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+  .field{margin-bottom:16px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-size:13px;font-weight:500;margin-bottom:7px;color:var(--ink)}
+  label .opt{font-weight:400;color:var(--ink3);font-size:12px}
+  input[type=text],input[type=tel],select,textarea{
+    width:100%;padding:10px 12px;font-size:14px;font-family:inherit;
+    border:1px solid var(--line);border-radius:9px;background:#FCFCFA;color:var(--ink);
+    outline:none;transition:border-color .15s,background .15s;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--brand);background:#fff}
+  textarea{resize:vertical;min-height:60px}
+
+  .types{display:flex;gap:8px}
+  .type{
+    flex:1;text-align:center;padding:10px 4px;font-size:13px;cursor:pointer;
+    border:1px solid var(--line);border-radius:9px;background:#FCFCFA;
+    transition:all .15s;user-select:none;
+  }
+  .type:hover{border-color:#C9C9C2}
+  .type.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-dark);font-weight:500}
+
+  .drop{
+    border:1.5px dashed #CFCFC7;border-radius:11px;padding:22px;text-align:center;
+    cursor:pointer;transition:all .15s;background:#FCFCFA;position:relative;overflow:hidden;
+  }
+  .drop:hover{border-color:var(--brand);background:#FAFDFB}
+  .drop.filled{padding:0;border-style:solid;border-color:var(--line)}
+  .drop .hint{font-size:13px;color:var(--ink2)}
+  .drop .hint b{color:var(--brand-dark)}
+  .drop .sub2{font-size:12px;color:var(--ink3);margin-top:4px}
+  .drop img{width:100%;display:block;max-height:260px;object-fit:contain;background:#111}
+  input[type=file]{display:none}
+
+  .packs{display:flex;gap:10px}
+  .pack{
+    flex:1;padding:13px 14px;border:1px solid var(--line);border-radius:10px;
+    cursor:pointer;transition:all .15s;background:#FCFCFA;
+  }
+  .pack:hover{border-color:#C9C9C2}
+  .pack.on{border-color:var(--brand);background:var(--brand-soft)}
+  .pack .t{font-size:14px;font-weight:500;margin-bottom:2px}
+  .pack.on .t{color:var(--brand-dark)}
+  .pack .d{font-size:12px;color:var(--ink3)}
+
+  .btn{
+    width:100%;padding:13px;font-size:15px;font-weight:500;font-family:inherit;
+    background:var(--brand);color:#fff;border:none;border-radius:10px;cursor:pointer;
+    transition:background .15s;margin-top:4px;
+  }
+  .btn:hover{background:var(--brand-dark)}
+  .btn:disabled{background:#C9C9C2;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.ghost:hover{background:#FAFAF8}
+
+  .progress{display:none;margin-top:18px}
+  .progress.show{display:block}
+  .bar{height:6px;background:#EDEDE8;border-radius:3px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--brand);transition:width .4s ease;border-radius:3px}
+  .pstatus{font-size:13px;color:var(--ink2);margin-top:9px;display:flex;justify-content:space-between}
+  .perr{color:var(--danger);font-size:13px;margin-top:10px;display:none}
+
+  /* 设备屏 */
+  .device-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+  .screen-box{
+    width:100%;aspect-ratio:1;background:#0A0A0A;border-radius:26px;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    position:relative;box-shadow:inset 0 0 0 1px #1E1E1E;
+  }
+  #screen{width:100%;height:100%;display:block}
+  .screen-empty{
+    position:absolute;text-align:center;color:#4A4A48;font-size:13px;padding:0 30px;
+  }
+  .screen-empty b{display:block;color:#6E6E6A;font-size:15px;margin-bottom:6px;font-weight:500}
+  .sim-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:16px}
+  .sim{
+    padding:9px 4px;font-size:12.5px;text-align:center;cursor:pointer;
+    border:1px solid var(--line);border-radius:8px;background:#FCFCFA;color:var(--ink2);
+    transition:all .15s;user-select:none;
+  }
+  .sim:hover{border-color:#C9C9C2;color:var(--ink)}
+  .sim.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:500}
+  .sim-note{font-size:12px;color:var(--ink3);margin-top:11px;text-align:center;line-height:1.5}
+
+  .result{display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
+  .result.show{display:block}
+  .kv{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);padding:4px 0}
+  .kv b{color:var(--ink);font-weight:500}
+  .dl{
+    display:block;text-align:center;margin-top:12px;padding:11px;
+    background:var(--brand-soft);color:var(--brand-dark);border-radius:9px;
+    text-decoration:none;font-size:13.5px;font-weight:500;
+  }
+  .dl:hover{background:#D3EEE4}
+  .tips{margin-top:18px;font-size:12.5px;color:var(--ink3);line-height:1.7}
+  .tips span{color:var(--amber)}
+
+  /* ---------- 顶部状态条 ---------- */
+  .rh-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;font-size:12.5px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;
+        background:#EFEFEA;color:var(--ink2);border:1px solid var(--line)}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--ink3)}
+  .pill.real{background:var(--brand-soft);color:var(--brand-dark);border-color:#BFE7D8}
+  .pill.real .dot{background:var(--brand)}
+  .pill.warn{background:#FDF6E3;color:#8A6412;border-color:#F0E0B8}
+  .pill.warn .dot{background:var(--amber)}
+  .pill.err{background:#FCEDEA;color:var(--danger);border-color:#F3D2CC}
+  .pill.err .dot{background:var(--danger)}
+  .ghost-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+    font-size:12.5px;border:1px solid var(--line);border-radius:9px;background:#fff;
+    color:var(--ink2);cursor:pointer;font-family:inherit}
+  .ghost-btn:hover{border-color:var(--brand);color:var(--brand-dark)}
+
+  /* ---------- 管理抽屉 ---------- */
+  .mask{position:fixed;inset:0;background:rgba(20,20,18,.34);opacity:0;pointer-events:none;
+        transition:opacity .2s;z-index:40}
+  .mask.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(620px,94vw);background:var(--card);
+    border-left:1px solid var(--line);transform:translateX(102%);transition:transform .26s cubic-bezier(.3,.8,.3,1);
+    z-index:41;display:flex;flex-direction:column}
+  .drawer.show{transform:none}
+  .drawer-hd{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+  .drawer-hd h2{font-size:16px;font-weight:600}
+  .drawer-hd .x{margin-left:auto;cursor:pointer;color:var(--ink3);font-size:20px;line-height:1;padding:4px 8px;border-radius:8px}
+  .drawer-hd .x:hover{background:#F1F1EC;color:var(--ink)}
+  .tabs{display:flex;gap:4px;padding:12px 22px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{padding:8px 12px;font-size:13px;color:var(--ink2);cursor:pointer;border-radius:8px 8px 0 0;
+       border-bottom:2px solid transparent}
+  .tab.on{color:var(--brand-dark);border-bottom-color:var(--brand);font-weight:500}
+  .drawer-bd{flex:1;overflow:auto;padding:20px 22px}
+  .pane{display:none}.pane.on{display:block}
+  .drawer-ft{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center}
+  .drawer-ft .msg{font-size:12.5px;color:var(--ink3);margin-left:auto}
+  .mini{padding:9px 16px;font-size:13px;border-radius:9px;border:1px solid var(--line);background:#fff;
+        color:var(--ink);cursor:pointer;font-family:inherit}
+  .mini:hover{border-color:var(--brand)}
+  .mini.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:500}
+  .mini.primary:hover{background:var(--brand-dark)}
+  .hint{font-size:12px;color:var(--ink3);line-height:1.6;margin-top:5px}
+  .hint b{color:var(--amber);font-weight:500}
+  .node-row{display:grid;grid-template-columns:78px 1fr 1.4fr 30px;gap:8px;margin-bottom:8px;align-items:center}
+  .node-row input{padding:8px 10px;font-size:13px}
+  .node-row .del{cursor:pointer;color:var(--ink3);text-align:center;font-size:16px}
+  .node-row .del:hover{color:var(--danger)}
+  .node-hd{display:grid;grid-template-columns:78px 1fr 1.4fr 30px;gap:8px;font-size:11.5px;
+           color:var(--ink3);margin-bottom:6px;letter-spacing:.3px}
+  textarea.spec{min-height:78px;font-size:12.5px;line-height:1.65}
+  .badge{display:inline-block;padding:1px 7px;border-radius:5px;background:#F1F1EC;color:var(--ink3);
+         font-size:11px;margin-left:6px}
+  .badge.todo{background:#FDF6E3;color:#8A6412}
+  pre.pv{background:#20201D;color:#D8D8D0;padding:14px;border-radius:10px;font-size:12px;
+         line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-top:10px;max-height:280px;overflow:auto}
+
+  /* ---------- 宠物库 ---------- */
+  .gallery{margin-top:16px}
+  .gal-head{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+  .gal-head h3{font-size:15px;font-weight:600}
+  .gal-head .n{font-size:12.5px;color:var(--ink3)}
+  .gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:14px}
+  .pet{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+       transition:border-color .15s,transform .15s}
+  .pet:hover{border-color:var(--brand);transform:translateY(-1px)}
+  .pet.on{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+  .pet .thumb{aspect-ratio:1;background:#0A0A0A;display:flex;align-items:center;justify-content:center;
+              overflow:hidden;position:relative}
+  .pet .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .pet .thumb .ph{color:#3A3A38;font-size:12px}
+  .pet .body{padding:10px 12px 12px}
+  .pet .nm{font-size:14px;font-weight:500;margin-bottom:2px;display:flex;align-items:center;gap:6px}
+  .pet .nm .tag{font-size:10.5px;font-weight:400;color:var(--ink3);border:1px solid var(--line);
+                border-radius:4px;padding:0 4px}
+  .pet .meta{font-size:11.5px;color:var(--ink3);line-height:1.5}
+  .pet .acts{display:flex;gap:6px;margin-top:9px}
+  .pet .acts button{flex:1;padding:6px 4px;font-size:12px;border-radius:7px;cursor:pointer;
+    font-family:inherit;border:1px solid var(--line);background:transparent;color:var(--ink2)}
+  .pet .acts button:hover{border-color:var(--brand);color:var(--brand-dark)}
+  .pet .acts button.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+  .pet .acts button.pri:hover{background:var(--brand-dark);color:#fff}
+  .gal-empty{font-size:13px;color:var(--ink3);padding:26px 0;text-align:center;
+             border:1px dashed var(--line);border-radius:12px}
+
+  /* ---------- 分段列表（逐段重生成） ---------- */
+  .seg-list{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+  .seg{display:flex;align-items:center;gap:10px;padding:7px 9px;border:1px solid var(--line);
+       border-radius:9px;background:var(--bg);cursor:pointer}
+  .seg:hover{border-color:var(--brand)}
+  .seg.cur{border-color:var(--brand);background:var(--brand-soft)}
+  .seg .th{width:38px;height:38px;border-radius:6px;background:#0A0A0A;overflow:hidden;flex:0 0 auto}
+  .seg .th img{width:100%;height:100%;object-fit:cover}
+  .seg .info{flex:1;min-width:0}
+  .seg .info .t{font-size:13px;font-weight:500;line-height:1.3}
+  .seg .info .d{font-size:11px;color:var(--ink3)}
+  .seg .regen{flex:0 0 auto;font-size:11.5px;padding:5px 9px;border:1px solid var(--line);
+    border-radius:7px;background:transparent;color:var(--ink2);cursor:pointer;font-family:inherit}
+  .seg .regen:hover{border-color:var(--brand);color:var(--brand-dark)}
+  .seg .regen:disabled{opacity:.5;cursor:not-allowed}
+  .seg.busy{opacity:.65}
+  .seg .chev{flex:0 0 auto;font-size:13px;color:var(--ink3)}
+
+  /* 展开的提示词面板 */
+  .seg-editor{border:1px solid var(--line);border-top:none;border-radius:0 0 9px 9px;
+    background:var(--card);padding:10px 12px 12px;margin:-4px 0 0;padding-top:12px}
+  .seg-editor + .seg-editor{display:none}
+  .seg-editor label{display:block;font-size:11.5px;color:var(--ink3);margin-bottom:6px}
+  .seg-editor textarea{width:100%;box-sizing:border-box;font-family:inherit;font-size:12.5px;
+    line-height:1.6;color:var(--ink);background:var(--bg);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;resize:vertical}
+  .seg-editor textarea:focus{outline:none;border-color:var(--brand)}
+  .seg-editor .row{display:flex;align-items:center;gap:10px;margin-top:9px}
+  .seg-editor .btn-regen{font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:8px;
+    border:1px solid var(--brand);background:var(--brand);color:#fff;cursor:pointer;font-family:inherit}
+  .seg-editor .btn-regen:hover{background:var(--brand-dark)}
+  .seg-editor .btn-regen:disabled{opacity:.55;cursor:not-allowed}
+  .seg-editor .cost{font-size:11px;color:var(--ink3);flex:1}
+  .seg-editor .btn-cancel{font-size:11.5px;padding:6px 10px;border:1px solid var(--line);
+    border-radius:8px;background:transparent;color:var(--ink2);cursor:pointer;font-family:inherit}
+  .seg-editor .prog{display:none;margin-top:10px}
+  .seg-editor .prog.show{display:block}
+  .seg-editor .bar{height:5px;border-radius:3px;background:var(--brand);width:0%;
+    transition:width 1s linear}
+  .seg-editor .prog{background:var(--line);border-radius:3px;padding:2px}
+  .seg-editor .ptxt{font-size:11.5px;color:var(--ink2);margin-top:6px}
+  .seg-editor .ptxt.err{color:#e05252}
+
+  /* ---------- 同步弹窗 ---------- */
+  .modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:60;
+              align-items:center;justify-content:center;padding:20px}
+  .modal-mask.show{display:flex}
+  .modal{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(460px,100%);
+         padding:22px 24px;max-height:92vh;overflow:auto}
+  .modal h3{font-size:16px;font-weight:600;margin-bottom:4px}
+  .modal .m-sub{font-size:12.5px;color:var(--ink3);margin-bottom:18px;line-height:1.6}
+  .sync-res{display:none;margin-top:16px;padding:12px 14px;border-radius:10px;font-size:12.5px;
+            line-height:1.7;border:1px solid var(--line);background:var(--bg)}
+  .sync-res.show{display:block}
+  .sync-res.ok{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-dark)}
+  .sync-res.err{border-color:#C0392B;background:#FCEDEA;color:#C0392B}
+  .modal-ft{display:flex;gap:8px;margin-top:18px}
+
+  /* ---------- 夜间模式（纯黑，护眼） ---------- */
+  html[data-theme="night"]{
+    --bg:#000000; --card:#0B0B0B; --line:#1F1F1F;
+    --ink:#DEDED8; --ink2:#8A8A84; --ink3:#5E5E58;
+    --brand:#2FBF95; --brand-dark:#25A87F; --brand-soft:#0C2620;
+    --danger:#D9675A; --amber:#C79A3C;
+  }
+  html[data-theme="night"] body{background:#000;color:var(--ink)}
+  html[data-theme="night"] input[type=text],
+  html[data-theme="night"] input[type=tel],
+  html[data-theme="night"] select,
+  html[data-theme="night"] textarea{background:#111;color:var(--ink);border-color:#242424}
+  html[data-theme="night"] input:focus,
+  html[data-theme="night"] select:focus,
+  html[data-theme="night"] textarea:focus{border-color:#2FBF95;background:#141414}
+  html[data-theme="night"] .type,
+  html[data-theme="night"] .pack,
+  html[data-theme="night"] .sim,
+  html[data-theme="night"] .drop{background:#111;border-color:#242424}
+  html[data-theme="night"] .type:hover,
+  html[data-theme="night"] .pack:hover,
+  html[data-theme="night"] .sim:hover,
+  html[data-theme="night"] .drop:hover{border-color:#333}
+  html[data-theme="night"] .type.on,
+  html[data-theme="night"] .pack.on{background:#0C2620;border-color:#2FBF95;color:#5FE0B6}
+  html[data-theme="night"] .drop:hover{background:#0D0D0D}
+  html[data-theme="night"] .pill{background:#141414;border-color:#242424;color:var(--ink2)}
+  html[data-theme="night"] .pill.real{background:#0C2620;color:#5FE0B6;border-color:#1B453A}
+  html[data-theme="night"] .pill.warn{background:#1E1808;color:#C79A3C;border-color:#3A2F12}
+  html[data-theme="night"] .pill.err{background:#241110;color:#D9675A;border-color:#4A2320}
+  html[data-theme="night"] .ghost-btn,
+  html[data-theme="night"] .mini{background:#111;border-color:#242424;color:var(--ink2)}
+  html[data-theme="night"] .ghost-btn:hover,
+  html[data-theme="night"] .mini:hover{border-color:#2FBF95;color:#5FE0B6}
+  html[data-theme="night"] .mini.primary{background:#2FBF95;border-color:#2FBF95;color:#04150F}
+  html[data-theme="night"] .btn.ghost{background:#111;border-color:#242424}
+  html[data-theme="night"] .btn.ghost:hover{background:#181818}
+  html[data-theme="night"] .bar{background:#161616}
+  html[data-theme="night"] .dl{background:#0C2620;color:#5FE0B6}
+  html[data-theme="night"] .dl:hover{background:#113028}
+  html[data-theme="night"] .badge{background:#161616;color:var(--ink3)}
+  html[data-theme="night"] .badge.todo{background:#1E1808;color:#C79A3C}
+  html[data-theme="night"] .drawer-hd .x:hover{background:#161616}
+  html[data-theme="night"] .mask{background:rgba(0,0,0,.72)}
+  html[data-theme="night"] .modal-mask{background:rgba(0,0,0,.8)}
+  html[data-theme="night"] .modal{background:#0B0B0B}
+  html[data-theme="night"] .sync-res{background:#0F0F0F;border-color:#242424}
+  html[data-theme="night"] .sync-res.ok{background:#0C2620;border-color:#2FBF95;color:#5FE0B6}
+  html[data-theme="night"] .sync-res.err{background:#241110;border-color:#4A2320;color:#D9675A}
+  html[data-theme="night"] .gal-empty{border-color:#242424}
+  html[data-theme="night"] .pet .thumb{background:#000}
+  html[data-theme="night"] .screen-box{background:#000;box-shadow:inset 0 0 0 1px #1A1A1A}
+  html[data-theme="night"] pre.pv{background:#0F0F0F;color:#B8B8B0}
+  html[data-theme="night"] .btn:disabled{background:#242424;color:#5E5E58}
+  html[data-theme="night"] #preview{background:#000}
+
+  .theme-btn{padding:6px 11px;font-size:12.5px;border:1px solid var(--line);border-radius:9px;
+    background:transparent;color:var(--ink2);cursor:pointer;font-family:inherit;
+    display:inline-flex;align-items:center;gap:5px}
+  .theme-btn:hover{border-color:var(--brand);color:var(--brand-dark)}
+
+  /* ---------- 登录 / 角色选择 ---------- */
+  .login-mask{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;
+    align-items:center;justify-content:center;padding:20px}
+  .login-mask.show{display:flex}
+  .login-box{width:min(360px,100%)}
+  .login-box h1{font-size:24px;margin-bottom:4px}
+  .login-box .sub2{font-size:13px;color:var(--ink2);margin-bottom:22px;line-height:1.6}
+  .login-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
+  .login-card .field{margin-bottom:14px}
+  .login-err{color:var(--danger);font-size:13px;margin-top:10px;display:none}
+  .role-btns{display:flex;gap:10px;margin-top:6px}
+  .role-btns .mini{flex:1;padding:12px 10px;font-size:13.5px}
+</style>
+<script>
+/* 主题要在首屏绘制前定下来，否则会闪一下白光刺眼 */
+(function () {
+  var t = localStorage.getItem('pet-theme') || 'night';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>给爱车领一只宠物</h1>
+    <p class="sub">上传一张照片，它会变成车头屏幕上会说话、会跟着你骑的小伙伴</p>
+    <div id="rhStatus" class="rh-status">
+      <span class="pill" id="userPill" style="display:none"><i class="dot"></i><span id="userText"></span></span>
+      <span class="pill" id="modePill" style="display:none"><i class="dot"></i><span id="modeText">检测中…</span></span>
+      <span class="pill" id="balPill" style="display:none"><i class="dot"></i><span id="balText"></span></span>
+      <span style="margin-left:auto;display:inline-flex;gap:8px">
+        <button class="theme-btn" id="themeBtn" title="切换白天 / 夜间">🌙 夜间</button>
+        <button class="ghost-btn" id="openAdmin" style="margin-left:0;display:none">⚙ 管理设置</button>
+        <button class="ghost-btn" id="logoutBtn" style="margin-left:0;display:none">退出</button>
+      </span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- 左：表单 -->
+    <div>
+      <div class="card">
+        <div class="sec-title">你的信息</div>
+        <div class="grid2">
+          <div class="field">
+            <label>怎么称呼你</label>
+            <input type="text" id="nickname" placeholder="比如：明哥">
+          </div>
+          <div class="field">
+            <label>手机号 <span class="opt">选填，用来接收完成通知</span></label>
+            <input type="tel" id="phone" placeholder="13800138000">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">宠物信息</div>
+        <div class="grid2">
+          <div class="field">
+            <label>它叫什么名字</label>
+            <input type="text" id="pet_name" placeholder="比如：旺财">
+          </div>
+          <div class="field">
+            <label>多大了 <span class="opt">选填</span></label>
+            <input type="text" id="pet_age" placeholder="比如：3 岁">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>它是什么</label>
+          <div class="types" id="kinds">
+            <div class="type on" data-v="animal">动物</div>
+            <div class="type" data-v="person">人物</div>
+            <div class="type" data-v="other">其他</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>一句话形容它的性格 <span class="opt">选填，会影响说话的语气</span></label>
+          <textarea id="persona" placeholder="比如：很黏人，一上车就兴奋，喜欢被人夸"></textarea>
+        </div>
+
+        <div class="field">
+          <label>补充描述 <span class="opt">选填，会加进每段视频的画面要求</span></label>
+          <textarea id="extra_prompt" placeholder="比如：戴一顶红色小帽，圆润卡通质感，表情憨憨的，笑起来露牙"></textarea>
+          <div class="hint">写「风格 / 穿着配饰 / 表情 / 体型」最有效；写「换背景」会被纯色背景规则覆盖。</div>
+        </div>
+
+        <div class="field">
+          <label>它的照片</label>
+          <div class="drop" id="drop">
+            <div class="hint" id="dropHint"><b>点击上传</b> 或把照片拖到这里</div>
+            <div class="sub2" id="dropSub">正面、光线好、背景干净效果最好 · 建议 1:1</div>
+            <img id="preview" style="display:none" alt="">
+          </div>
+          <input type="file" id="file" accept="image/*">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-title">生成哪些动作</div>
+        <div class="packs" id="packs">
+          <div class="pack on" data-n="4">
+            <div class="t">基础套 · 4 段</div>
+            <div class="d">待机 / 骑行 / 刹车 / 说话</div>
+          </div>
+          <div class="pack" data-n="6">
+            <div class="t">完整套 · 6 段</div>
+            <div class="d">再加 摔倒 / 开心</div>
+          </div>
+        </div>
+        <button class="btn" id="submit" style="margin-top:16px">开始生成</button>
+
+        <div class="progress" id="progress">
+          <div class="bar"><i id="bar"></i></div>
+          <div class="pstatus"><span id="pstatus">准备中…</span><span id="ppct">0%</span></div>
+          <div class="perr" id="perr"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：设备屏 -->
+    <div class="device-card">
+      <div class="sec-title">车头屏幕预览 · 480 × 480</div>
+      <div class="screen-box">
+        <canvas id="screen" width="480" height="480"></canvas>
+        <div class="screen-empty" id="empty">
+          <b>还没有宠物</b>
+          填好左边，点「开始生成」
+        </div>
+      </div>
+
+      <div class="sim-btns" id="simBtns" style="display:none">
+        <div class="sim on" data-a="idle">待机</div>
+        <div class="sim" data-a="run">骑行</div>
+        <div class="sim" data-a="brake">刹车</div>
+        <div class="sim" data-a="talk">说话</div>
+      </div>
+      <p class="sim-note" id="simNote" style="display:none">
+        装到车上后，这些切换由六轴传感器自动完成，不用手点
+      </p>
+
+      <div class="result" id="result">
+        <div class="kv"><span>宠物</span><b id="rPet">—</b></div>
+        <div class="kv"><span>动画段数</span><b id="rFrames">—</b></div>
+        <div class="kv"><span>资源包大小</span><b id="rSize">—</b></div>
+        <div class="seg-list" id="segList"></div>
+        <button class="btn" id="saveSync" style="margin-top:12px">保存并同步到车机</button>
+        <a class="dl" id="dl" href="#">下载资源包（.pack）</a>
+      </div>
+
+      <p class="tips" id="tipsBox">
+        <span>提示：</span>生成好的宠物会进入下面的「宠物库」，随时可以回看、同步到车机。
+      </p>
+    </div>
+  </div>
+
+  <!-- 宠物库：生成的宠物都挂在这里，不写死在系统里 -->
+  <div class="gallery">
+    <div class="gal-head">
+      <h3>我的宠物库</h3>
+      <span class="n" id="galCount">加载中…</span>
+      <span style="margin-left:auto;font-size:12.5px;color:var(--ink3)">
+        点「看效果」在右边屏幕播放，点「同步」推到车机
+      </span>
+    </div>
+    <div class="gal-grid" id="galGrid"></div>
+    <div class="gal-empty" id="galEmpty" style="display:none">
+      还没有生成过的宠物。上面填好资料生成第一只，它会出现在这里。
+    </div>
+  </div>
+</div>
+
+<!-- 同步到设备 -->
+<div class="modal-mask" id="syncMask">
+  <div class="modal">
+    <h3>同步到车机</h3>
+    <div class="m-sub" id="syncSub">把这只宠物的资源包推到 ESP32</div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>设备地址 <span class="opt">IP 或主机名</span></label>
+        <input type="text" id="d_host" placeholder="192.168.1.42">
+      </div>
+      <div class="field">
+        <label>端口</label>
+        <input type="text" id="d_port" value="80">
+      </div>
+    </div>
+    <div class="field">
+      <label>接收路径 <span class="opt">固件里实现的接口</span></label>
+      <input type="text" id="d_path" value="/api/pet">
+      <div class="hint" id="devHint"></div>
+    </div>
+
+    <div class="sync-res" id="syncRes"></div>
+
+    <div class="modal-ft">
+      <button class="mini" id="devPing">检测连接</button>
+      <button class="mini primary" id="doSync" style="margin-left:auto">开始同步</button>
+      <button class="mini" id="syncCancel">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 登录：用户与管理员走同一个门，按账号区分身份 -->
+<div class="login-mask" id="loginMask">
+  <div class="login-box">
+    <h1>给爱车领一只宠物</h1>
+    <p class="sub2">登录后使用。用户和管理员入口相同，按账号自动区分能看到的内容。</p>
+    <div class="login-card">
+      <div class="field">
+        <label>账号</label>
+        <input type="text" id="loginUser" placeholder="请输入账号" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input type="password" id="loginPass" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+      <button class="btn" id="loginBtn" style="margin-top:6px">登录</button>
+      <div class="login-err" id="loginErr"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 管理员登录后选前台还是后台 -->
+<div class="modal-mask" id="roleMask">
+  <div class="modal">
+    <h3>管理员登录成功</h3>
+    <div class="m-sub">选择这次待在哪一边。之后随时可以从右上角「管理设置」进后台。</div>
+    <div class="role-btns">
+      <button class="mini primary" id="goFront">进入前台（用户界面）</button>
+      <button class="mini" id="goBack">进入后台（管理设置）</button>
+    </div>
+  </div>
+</div>
+
+<div class="mask" id="mask"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-hd">
+    <h2>管理设置</h2>
+    <span class="badge" id="saveBadge">未修改</span>
+    <div class="x" id="closeAdmin">×</div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-t="api">接口</div>
+    <div class="tab" data-t="nodes">节点映射</div>
+    <div class="tab" data-t="prompt">提示规范</div>
+    <div class="tab" data-t="media">输出与转码</div>
+  </div>
+
+  <div class="drawer-bd">
+    <!-- 接口 -->
+    <div class="pane on" id="pane-api">
+      <div class="grid2">
+        <div class="field">
+          <label>运行模式 <span class="opt">auto 会自动判断</span></label>
+          <select id="c_mode">
+            <option value="auto">auto（配好就走真实）</option>
+            <option value="real">real（强制真实）</option>
+            <option value="mock">mock（只用测试片）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>接口版本</label>
+          <select id="c_version">
+            <option value="v2">v2（Bearer + 路径带 workflowId）</option>
+            <option value="v1">v1（旧版 apiKey 走 body）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>API Key</label>
+        <input type="text" id="c_key" placeholder="粘贴 RunningHub 的 API Key">
+        <div class="hint">已保存的密钥以 <b>58bd****1b94</b> 形式显示；留空或保留 **** 表示不修改。</div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>工作流 ID</label>
+          <input type="text" id="c_workflow" placeholder="纯数字，例如 2085393570013474817">
+        </div>
+        <div class="field">
+          <label>服务地址</label>
+          <input type="text" id="c_base" placeholder="https://www.runninghub.cn">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>轮询间隔（秒）</label>
+          <input type="text" id="c_poll" value="5">
+        </div>
+        <div class="field">
+          <label>单段超时（秒）</label>
+          <input type="text" id="c_timeout" value="900">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>并发数 <span class="opt">共享账号建议 2</span></label>
+          <input type="text" id="c_conc" value="2">
+        </div>
+        <div class="field">
+          <label>实例类型</label>
+          <input type="text" id="c_instance" value="default">
+        </div>
+      </div>
+
+      <button class="mini" id="btnTest" style="margin-top:6px">测试连接 / 查余额</button>
+      <div class="hint" id="testOut"></div>
+    </div>
+
+    <!-- 节点映射 -->
+    <div class="pane" id="pane-nodes">
+      <div class="hint" style="margin-bottom:14px">
+        这里对应发给工作流的 <b>nodeInfoList</b>。左边写节点 ID（ComfyUI 画布上的数字），中间写字段名，
+        右边写值。值里可以用三个变量：<br>
+        <b>{{IMAGE_NAME}}</b> → 上传后返回的文件名（喂给图片输入节点）<br>
+        <b>{{PROMPT}}</b> → 下面「提示规范」编译出来的完整提示词（喂给文本/提示词节点）<br>
+        <b>{{ANIM}}</b> → 当前动作名（idle / run / brake / talk）
+      </div>
+      <div class="node-hd"><span>nodeId</span><span>fieldName</span><span>fieldValue</span><span></span></div>
+      <div id="nodeBox"></div>
+      <button class="mini" id="btnAddNode" style="margin-top:8px">+ 添加一行</button>
+      <div class="hint" style="margin-top:12px">
+        <b>怎么找这几个值</b>：在 RunningHub 里打开这个工作流 → 右上角 API 调用 / 工作流 JSON，
+        找到「图片输入」节点的 id 和字段名（通常是 <code>image</code>），
+        以及「提示词」节点的 id 和字段名（通常是 <code>text</code> 或 <code>prompt</code>）。
+      </div>
+    </div>
+
+    <!-- 提示规范 -->
+    <div class="pane" id="pane-prompt">
+      <div class="hint" style="margin-bottom:14px">
+        五段结构固定：<b>角色锁定 → 动作 → 镜头锁定 → 背景光照 → 禁止项</b>。
+        顺序不能乱，模型对靠前的约束更敏感。前四段全段共享，只有「动作」每段不同。
+      </div>
+
+      <div class="field">
+        <label>① 角色锁定 <span class="opt">决定像不像同一只</span></label>
+        <textarea class="spec" id="p_lock"></textarea>
+      </div>
+
+      <div class="field">
+        <label>② 动作 <span class="opt">每段唯一变量</span></label>
+        <div id="actionsBox"></div>
+      </div>
+
+      <div class="field">
+        <label>③ 镜头锁定</label>
+        <textarea class="spec" id="p_camera"></textarea>
+      </div>
+
+      <div class="field">
+        <label>④ 背景与光照</label>
+        <textarea class="spec" id="p_lighting"></textarea>
+      </div>
+
+      <div class="field">
+        <label>⑤ 禁止项</label>
+        <textarea class="spec" id="p_negative"></textarea>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>预览哪个动作</label>
+          <select id="p_previewAnim"></select>
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <button class="mini" id="btnPreview" style="width:100%">生成预览</button>
+        </div>
+      </div>
+      <pre class="pv" id="p_preview">点「生成预览」看实际发给模型的完整提示词</pre>
+    </div>
+
+    <!-- 输出与转码 -->
+    <div class="pane" id="pane-media">
+      <div class="grid2">
+        <div class="field">
+          <label>生成时长（秒）</label>
+          <input type="text" id="o_dur" value="2">
+        </div>
+        <div class="field">
+          <label>生成分辨率</label>
+          <input type="text" id="o_size" value="480">
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:16px">
+        这两项会如实发给工作流（如果你的节点支持时长/尺寸入参），同时决定后续转码的基准。
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>屏分辨率</label>
+          <input type="text" id="m_size" value="480">
+        </div>
+        <div class="field">
+          <label>帧率</label>
+          <input type="text" id="m_fps" value="20">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>JPEG 质量 <span class="opt">1~31，越小越清晰</span></label>
+          <input type="text" id="m_q" value="6">
+        </div>
+        <div class="field">
+          <label>截取起点（秒） <span class="opt">跳过开头的入画过渡</span></label>
+          <input type="text" id="m_start" value="0.4">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>画面适配 <span class="opt">竖屏源建议裁切</span></label>
+          <select id="m_fit">
+            <option value="crop">裁切填满（主体占满屏）</option>
+            <option value="pad">黑边完整（保留全画面）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>裁切焦点 <span class="opt">0=顶 0.5=中，保头部用 0.35</span></label>
+          <input type="text" id="m_focus" value="0.35">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>单段最长（秒）</label>
+          <input type="text" id="m_maxclip" value="2">
+        </div>
+        <div class="field"></div>
+      </div>
+      <div class="hint">
+        <b>帧率</b>：ESP32-S3 硬解 480×480 上限 25fps，12fps 对宠物循环动画足够顺滑还省 20% 空间。
+        <b>单段最长</b>是兜底默认值；每段各自的时长在 config.json 的 media.anim_seconds 里按动画名设（待机/行驶 5s、说话 3s 这类）。
+        <b>体积红线</b>：整包要整个装进 8MB PSRAM，还要给小智固件留运行内存，控制在 3MB 以内比较稳。
+      </div>
+    </div>
+  </div>
+
+  <div class="drawer-ft">
+    <button class="mini primary" id="btnSave">保存并生效</button>
+    <button class="mini" id="btnReload">放弃修改</button>
+    <span class="msg" id="saveMsg"></span>
+  </div>
+</aside>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let kind = 'animal';
+document.querySelectorAll('#kinds .type').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#kinds .type').forEach(x => x.classList.remove('on'));
+    el.classList.add('on'); kind = el.dataset.v;
+  };
+});
+
+let packN = 4;
+document.querySelectorAll('#packs .pack').forEach(el => {
+  el.onclick = () => {
+    document.querySelectorAll('#packs .pack').forEach(x => x.classList.remove('on'));
+    el.classList.add('on'); packN = +el.dataset.n;
+  };
+});
+
+let fileObj = null;
+const drop = $('drop'), fileInput = $('file'), preview = $('preview');
+
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = 'var(--brand)'; };
+drop.ondragleave = () => { drop.style.borderColor = ''; };
+drop.ondrop = e => {
+  e.preventDefault(); drop.style.borderColor = '';
+  if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+};
+fileInput.onchange = () => { if (fileInput.files[0]) setFile(fileInput.files[0]); };
+
+function setFile(f) {
+  if (!f.type.startsWith('image/')) { alert('请选择图片文件'); return; }
+  if (f.size > 8 * 1024 * 1024) { alert('图片不要超过 8MB'); return; }
+  fileObj = f;
+  preview.src = URL.createObjectURL(f);
+  preview.style.display = 'block';
+  $('dropHint').style.display = 'none';
+  $('dropSub').style.display = 'none';
+  drop.classList.add('filled');
+}
+
+/* ---------------- 播放器 ---------------- */
+const canvas = $('screen'), ctx = canvas.getContext('2d');
+let frames = {};        // anim -> [Image]
+let order = {};         // anim -> count
+let cur = 'idle', idx = 0, fps = 20, last = 0, oneshot = {};
+
+function draw() {
+  const arr = frames[cur];
+  if (!arr || !arr.length) return;
+  const img = arr[idx % arr.length];
+  if (img && img.complete && img.naturalWidth) {
+    ctx.fillStyle = '#0A0A0A';
+    ctx.fillRect(0, 0, 480, 480);
+    ctx.drawImage(img, 0, 0, 480, 480);
+  }
+}
+
+function loop(ts) {
+  if (ts - last >= 1000 / fps) {
+    last = ts;
+    const arr = frames[cur];
+    if (arr && arr.length) {
+      if (oneshot[cur] && idx >= arr.length - 1) {
+        idx = 0; cur = 'idle'; syncBtns();
+      } else {
+        idx++;
+      }
+      draw();
+    }
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function play(anim) {
+  if (!frames[anim]) return;
+  cur = anim; idx = 0; draw(); syncBtns();
+  if (typeof syncSegCur === 'function') syncSegCur();
+}
+function syncBtns() {
+  document.querySelectorAll('#simBtns .sim').forEach(el => {
+    el.classList.toggle('on', el.dataset.a === cur);
+  });
+}
+document.querySelectorAll('#simBtns .sim').forEach(el => {
+  el.onclick = () => play(el.dataset.a);
+});
+
+/* ---------------- 提交 ---------------- */
+const STATUS_TEXT = {
+  queued: '排队中…',
+  generating: 'AI 正在生成动作…',
+  packing: '转码打包中…',
+  done: '完成',
+  failed: '生成失败'
+};
+
+$('submit').onclick = async () => {
+  const nickname = $('nickname').value.trim();
+  const petName = $('pet_name').value.trim();
+  if (!nickname) return alert('请填写怎么称呼你');
+  if (!petName) return alert('请填写宠物的名字');
+  if (!fileObj) return alert('请上传一张宠物的照片');
+
+  const fd = new FormData();
+  fd.append('nickname', nickname);
+  fd.append('phone', $('phone').value.trim());
+  fd.append('pet_name', petName);
+  fd.append('pet_age', $('pet_age').value.trim());
+  fd.append('pet_kind', kind);
+  fd.append('persona', $('persona').value.trim());
+  fd.append('extra_prompt', $('extra_prompt').value.trim());
+  fd.append('anim_count', packN);
+  fd.append('image', fileObj);
+
+  $('submit').disabled = true;
+  $('submit').textContent = '生成中…';
+  $('progress').classList.add('show');
+  $('perr').style.display = 'none';
+  setProgress(3, '提交中…');
+
+  let tid;
+  try {
+    const r = await fetch('/api/submit', { method: 'POST', body: fd });
+    if (!r.ok) throw new Error((await r.json()).detail || '提交失败');
+    tid = (await r.json()).task_id;
+  } catch (e) {
+    return fail(e.message);
+  }
+
+  const timer = setInterval(async () => {
+    let t;
+    try {
+      const r = await fetch('/api/task/' + tid);
+      t = await r.json();
+    } catch (e) { return; }
+
+    const pct = t.status === 'done' ? 100 : (t.progress || (t.status === 'generating' ? 35 : 15));
+    setProgress(pct, STATUS_TEXT[t.status] || t.status);
+
+    if (t.status === 'done') {
+      clearInterval(timer);
+      await loadAndPlay(tid, t);
+      $('submit').disabled = false;
+      $('submit').textContent = '再生成一只';
+    } else if (t.status === 'failed') {
+      clearInterval(timer);
+      fail(t.error || '生成失败');
+    }
+  }, 1200);
+};
+
+function setProgress(pct, text) {
+  $('bar').style.width = pct + '%';
+  $('ppct').textContent = Math.round(pct) + '%';
+  $('pstatus').textContent = text;
+}
+
+function fail(msg) {
+  $('perr').textContent = msg;
+  $('perr').style.display = 'block';
+  $('submit').disabled = false;
+  $('submit').textContent = '重新生成';
+}
+
+async function loadAndPlay(tid, t) {
+  CUR_TID = tid; CUR_TASK = t;
+  $('empty').style.display = 'none';
+  $('simBtns').style.display = 'grid';
+  $('simNote').style.display = 'block';
+  $('result').classList.add('show');
+
+  let total = 0;
+  frames = {}; oneshot = {};
+  for (const [anim, info] of Object.entries(t.anims || {})) {
+    const imgs = info.frames.map(u => { const i = new Image(); i.src = u; return i; });
+    frames[anim] = imgs;
+    total += info.count;
+    oneshot[anim] = (anim === 'brake' || anim === 'fall');
+  }
+  await Promise.all(Object.values(frames).flat().map(i =>
+    i.complete ? Promise.resolve() : new Promise(res => { i.onload = i.onerror = res; })
+  ));
+
+  fps = (t.pack && t.pack.applied && t.pack.applied.fps) || 20;
+  play(frames.idle ? 'idle' : Object.keys(frames)[0]);
+
+  $('rPet').textContent = t.pet_name || '—';
+  $('rFrames').textContent = Object.keys(frames).length + ' 段 / ' + total + ' 帧';
+  $('rSize').textContent = t.pack ? (t.pack.size / 1024 / 1024).toFixed(2) + ' MB' : '—';
+  $('dl').href = t.pack_url;
+  $('dl').textContent = '下载资源包（' + (t.pack ? (t.pack.size / 1024 / 1024).toFixed(2) + ' MB' : '') + '）';
+  renderSegs(t);
+  loadGallery();
+}
+// ================= 管理设置 =================
+let CFG = null;
+
+function openDrawer() { $('mask').classList.add('show'); $('drawer').classList.add('show'); }
+function closeDrawer() { $('mask').classList.remove('show'); $('drawer').classList.remove('show'); }
+
+function setSaveBadge(txt, cls) {
+  const b = $('saveBadge');
+  b.textContent = txt;
+  b.className = 'badge' + (cls ? ' ' + cls : '');
+}
+
+async function loadRhStatus() {
+  const pill = $('modePill'), txt = $('modeText');
+  try {
+    const r = await fetch('/api/rh/status');
+    const d = await r.json();
+    if (d.mode === 'real' && d.ready && !d.error) {
+      pill.className = 'pill real';
+      txt.textContent = '真实生成 · 工作流 ' + d.workflow_id;
+      if (d.money) {
+        $('balPill').style.display = 'inline-flex';
+        $('balText').textContent = '余额 ¥' + d.money + ' / ' + d.coins + ' 点';
+      }
+    } else if (d.mode === 'real') {
+      pill.className = 'pill err';
+      txt.textContent = '接口未就绪：' + (d.error || '缺少 key 或工作流 ID');
+    } else {
+      pill.className = 'pill warn';
+      txt.textContent = '模拟模式 · 生成的是测试画面';
+    }
+  } catch (e) {
+    pill.className = 'pill err';
+    txt.textContent = '后端未连接';
+  }
+}
+
+function animList() {
+  const a = (CFG && CFG.anims) || {};
+  const names = new Set([...(a.basic || []), ...(a.full || [])]);
+  if (!names.size) ['idle', 'run', 'brake', 'talk'].forEach(x => names.add(x));
+  return [...names];
+}
+
+const ANIM_CN = { idle: '待机', run: '骑行', brake: '刹车', talk: '说话', fall: '摔倒', happy: '开心' };
+
+function renderNodes(list) {
+  const box = $('nodeBox');
+  box.innerHTML = '';
+  (list || []).forEach(n => addNodeRow(n.nodeId, n.fieldName, n.fieldValue));
+}
+
+function addNodeRow(nodeId = '', fieldName = '', fieldValue = '') {
+  const row = document.createElement('div');
+  row.className = 'node-row';
+  row.innerHTML = '<input class="n-id" placeholder="6"><input class="n-fn" placeholder="image">' +
+                  '<input class="n-fv" placeholder="{{IMAGE_NAME}}"><span class="del">×</span>';
+  row.querySelector('.n-id').value = nodeId;
+  row.querySelector('.n-fn').value = fieldName;
+  row.querySelector('.n-fv').value = fieldValue;
+  row.querySelector('.del').onclick = () => row.remove();
+  row.oninput = () => setSaveBadge('有未保存修改', 'todo');
+  $('nodeBox').appendChild(row);
+}
+
+function collectNodes() {
+  const rows = [...$('nodeBox').querySelectorAll('.node-row')];
+  const groups = new Map();
+  rows.forEach(r => {
+    const id = r.querySelector('.n-id').value.trim();
+    const fn = r.querySelector('.n-fn').value.trim();
+    const fv = r.querySelector('.n-fv').value;
+    if (!id && !fn) return;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push({ fieldName: fn, fieldValue: fv });
+  });
+  const out = [];
+  groups.forEach((fields, id) => {
+    if (fields.length === 1) {
+      out.push({ nodeId: id, fieldName: fields[0].fieldName, fieldValue: fields[0].fieldValue });
+    } else {
+      out.push({ nodeId: id, fieldValues: fields });
+    }
+  });
+  return out;
+}
+
+function renderActions(actions) {
+  const box = $('actionsBox');
+  box.innerHTML = '';
+  const sel = $('p_previewAnim');
+  sel.innerHTML = '';
+  animList().forEach(name => {
+    const f = document.createElement('div');
+    f.className = 'field';
+    f.style.marginBottom = '10px';
+    f.innerHTML = '<label>' + (ANIM_CN[name] || name) + ' <span class="opt">' + name + '</span></label>' +
+                  '<textarea class="spec act" data-a="' + name + '" style="min-height:58px"></textarea>';
+    f.querySelector('textarea').value = actions[name] || actions._default || '';
+    f.querySelector('textarea').oninput = () => setSaveBadge('有未保存修改', 'todo');
+    box.appendChild(f);
+
+    const o = document.createElement('option');
+    o.value = name; o.textContent = (ANIM_CN[name] || name) + '（' + name + '）';
+    sel.appendChild(o);
+  });
+}
+
+function fillForm(cfg) {
+  const rh = cfg.runninghub || {};
+  const ps = rh.prompt_spec || {};
+  const os = rh.output_spec || {};
+  const md = cfg.media || {};
+
+  $('c_mode').value = rh.mode || 'auto';
+  $('c_version').value = rh.api_version || 'v2';
+  $('c_key').value = rh.api_key || '';
+  $('c_workflow').value = rh.workflow_id || '';
+  $('c_base').value = rh.base_url || 'https://www.runninghub.cn';
+  $('c_poll').value = rh.poll_interval || 5;
+  $('c_timeout').value = rh.timeout_seconds || 900;
+  $('c_conc').value = rh.max_concurrent || 2;
+  $('c_instance').value = rh.instance_type || 'default';
+
+  renderNodes(rh.node_info_template || []);
+
+  $('p_lock').value = ps.lock || '';
+  $('p_camera').value = ps.camera || '';
+  $('p_lighting').value = ps.lighting || '';
+  $('p_negative').value = ps.negative || '';
+  renderActions(ps.actions || {});
+
+  $('o_dur').value = os.duration_seconds || 2;
+  $('o_size').value = os.size || 480;
+
+  $('m_size').value = md.size || 480;
+  $('m_fps').value = md.fps || 20;
+  $('m_q').value = md.jpeg_quality || 6;
+  $('m_fit').value = md.fit || 'crop';
+  $('m_focus').value = (md.crop_focus === undefined ? 0.35 : md.crop_focus);
+  $('m_start').value = (md.trim_start === undefined ? 0.4 : md.trim_start);
+  $('m_maxclip').value = md.max_clip_seconds || 2;
+}
+
+function composeLocal(anim) {
+  const act = document.querySelector('.act[data-a="' + anim + '"]');
+  const parts = [
+    $('p_lock').value.trim(),
+    '动作：' + (act ? act.value.trim() : ''),
+    $('p_camera').value.trim(),
+    $('p_lighting').value.trim(),
+    $('p_negative').value.trim(),
+  ];
+  return parts.filter(Boolean).join('\n');
+}
+
+async function openAdminPanel() {
+  try {
+    const r = await fetch('/api/config');
+    if (r.status === 401) { ME = null; return showLogin(); }
+    if (r.status === 403) { alert('需要管理员权限'); return; }
+    const d = await r.json();
+    CFG = d.config;
+    fillForm(CFG);
+    setSaveBadge(d.ready ? '已就绪' : '缺配置', d.ready ? '' : 'todo');
+  } catch (e) {
+    setSaveBadge('读取失败', 'todo');
+  }
+  openDrawer();
+}
+
+async function saveConfig() {
+  const actions = {};
+  document.querySelectorAll('.act').forEach(t => { actions[t.dataset.a] = t.value; });
+
+  const payload = {
+    runninghub: {
+      mode: $('c_mode').value,
+      api_version: $('c_version').value,
+      api_key: $('c_key').value.trim(),
+      workflow_id: $('c_workflow').value.trim(),
+      base_url: $('c_base').value.trim(),
+      poll_interval: $('c_poll').value,
+      timeout_seconds: $('c_timeout').value,
+      max_concurrent: $('c_conc').value,
+      instance_type: $('c_instance').value.trim(),
+      node_info_template: collectNodes(),
+      prompt_spec: {
+        lock: $('p_lock').value,
+        camera: $('p_camera').value,
+        lighting: $('p_lighting').value,
+        negative: $('p_negative').value,
+        actions: actions,
+      },
+      output_spec: {
+        duration_seconds: $('o_dur').value,
+        size: $('o_size').value,
+      },
+    },
+    media: {
+      size: $('m_size').value,
+      fps: $('m_fps').value,
+      jpeg_quality: $('m_q').value,
+      fit: $('m_fit').value,
+      crop_focus: $('m_focus').value,
+      trim_start: $('m_start').value,
+      max_clip_seconds: $('m_maxclip').value,
+    },
+  };
+
+  $('btnSave').disabled = true;
+  $('saveMsg').textContent = '保存中…';
+  try {
+    const r = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || '保存失败');
+    $('saveMsg').textContent = d.ready ? '已保存，立即生效' : '已保存，但 key 或工作流 ID 还没配好';
+    setSaveBadge(d.ready ? '已就绪' : '缺配置', d.ready ? '' : 'todo');
+    await loadRhStatus();
+  } catch (e) {
+    $('saveMsg').textContent = String(e.message || e);
+  } finally {
+    $('btnSave').disabled = false;
+  }
+}
+
+$('openAdmin').onclick = openAdminPanel;
+$('closeAdmin').onclick = closeDrawer;
+$('mask').onclick = closeDrawer;
+$('btnAddNode').onclick = () => { addNodeRow(); setSaveBadge('有未保存修改', 'todo'); };
+$('btnSave').onclick = saveConfig;
+$('btnReload').onclick = openAdminPanel;
+$('btnPreview').onclick = () => {
+  const a = $('p_previewAnim').value || 'idle';
+  $('p_preview').textContent = composeLocal(a);
+};
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+    document.querySelectorAll('.pane').forEach(x => x.classList.remove('on'));
+    t.classList.add('on');
+    $('pane-' + t.dataset.t).classList.add('on');
+  };
+});
+$('btnTest').onclick = async () => {
+  $('testOut').textContent = '检查中…';
+  try {
+    const r = await fetch('/api/rh/status');
+    const d = await r.json();
+    $('testOut').textContent = d.error
+      ? ('失败：' + d.error)
+      : ('连接正常 · 余额 ¥' + d.money + ' · ' + d.coins + ' 点 · 类型 ' + d.api_type +
+         (d.workflow_id ? '' : ' · 但工作流 ID 未填'));
+  } catch (e) { $('testOut').textContent = '请求失败：' + e; }
+};
+
+/* ================= 主题：白天 / 夜间（纯黑） ================= */
+const themeBtn = $('themeBtn');
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  try { localStorage.setItem('pet-theme', t); } catch (e) {}
+  themeBtn.textContent = t === 'night' ? '☀️ 白天' : '🌙 夜间';
+  themeBtn.title = t === 'night' ? '切到白天模式' : '切到夜间模式（纯黑）';
+}
+applyTheme(document.documentElement.getAttribute('data-theme') || 'night');
+themeBtn.onclick = () => applyTheme(
+  document.documentElement.getAttribute('data-theme') === 'night' ? 'day' : 'night'
+);
+
+/* ================= 宠物库 ================= */
+let CUR_TID = null, CUR_TASK = null;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+async function loadGallery() {
+  const grid = $('galGrid');
+  try {
+    const r = await fetch('/api/gallery');
+    if (r.status === 401) { ME = null; return showLogin(); }
+    const list = await r.json();
+    $('galCount').textContent = list.length ? list.length + ' 只' : '';
+    $('galEmpty').style.display = list.length ? 'none' : 'block';
+    grid.innerHTML = '';
+    list.forEach(it => {
+      const el = document.createElement('div');
+      el.className = 'pet' + (it.id === CUR_TID ? ' on' : '');
+      el.dataset.id = it.id;
+      el.innerHTML =
+        `<div class="thumb">${it.cover ? `<img src="${it.cover}" alt="" loading="lazy">`
+                                     : '<span class="ph">无封面</span>'}</div>
+         <div class="body">
+           <div class="nm">${esc(it.pet_name)}<span class="tag">${it.anims.length} 段</span></div>
+           <div class="meta">${it.frames} 帧 · ${(it.size / 1048576).toFixed(2)} MB · ${fmtDate(it.created)}</div>
+           <div class="acts">
+             <button data-act="play">看效果</button>
+             <button data-act="sync" class="pri">同步</button>
+           </div>
+         </div>`;
+      el.querySelector('[data-act="play"]').onclick = () => openPet(it.id);
+      el.querySelector('[data-act="sync"]').onclick = () => openSync(it.id, it.pet_name);
+      grid.appendChild(el);
+    });
+  } catch (e) {
+    grid.innerHTML = '';
+    $('galCount').textContent = '读取失败';
+  }
+}
+
+async function openPet(tid) {
+  try {
+    const r = await fetch('/api/task/' + tid);
+    const t = await r.json();
+    if (t.status !== 'done') return alert('这只还没打包完成');
+    await loadAndPlay(tid, t);
+    document.querySelector('.device-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (e) { alert('读取失败：' + e.message); }
+}
+
+/* ================= 分段列表 · 单段重生成 ================= */
+const segPromptCache = {};   // anim -> 预设提示词（首次展开时拉一次）
+
+async function getPreset(anim) {
+  if (segPromptCache[anim] !== undefined) return segPromptCache[anim];
+  try {
+    const d = await (await fetch('/api/prompt-preview?anim=' + anim)).json();
+    segPromptCache[anim] = d.prompt || '';
+  } catch (e) { segPromptCache[anim] = ''; }
+  return segPromptCache[anim];
+}
+
+function renderSegs(t) {
+  const box = $('segList');
+  box.innerHTML = '';
+  Object.entries(t.anims || {}).forEach(([a, info]) => {
+    const el = document.createElement('div');
+    el.className = 'seg' + (a === cur ? ' cur' : '');
+    el.dataset.anim = a;
+    el.innerHTML =
+      `<div class="th">${info.frames[0] ? `<img src="${info.frames[0]}" alt="">` : ''}</div>
+       <div class="info">
+         <div class="t">${ANIM_CN[a] || a}</div>
+         <div class="d">${info.count} 帧 · ${(info.count / (t.pack && t.pack.applied ? t.pack.applied.fps : 12) || 0).toFixed(1)}s</div>
+       </div>
+       <span class="chev">✎</span>`;
+    el.onclick = () => toggleSegEditor(a, el);
+    box.appendChild(el);
+  });
+  syncSegCur();
+}
+
+function syncSegCur() {
+  document.querySelectorAll('#segList .seg').forEach(el =>
+    el.classList.toggle('cur', el.dataset.anim === cur));
+}
+
+/* 点分段行：播放该段 + 展开/收起提示词编辑面板 */
+async function toggleSegEditor(anim, row) {
+  play(anim);
+  const box = $('segList');
+  const old = box.querySelector('.seg-editor');
+  if (old && old.dataset.anim === anim) { old.remove(); return; }
+  if (old) old.remove();
+
+  // 预设：该段上次用过的提示词 > 服务器预设
+  const used = CUR_TASK && CUR_TASK.anim_prompts && CUR_TASK.anim_prompts[anim];
+  const prompt = used || await getPreset(anim);
+
+  const ed = document.createElement('div');
+  ed.className = 'seg-editor show';
+  ed.dataset.anim = anim;
+  ed.innerHTML =
+    `<label>提示词 · 直接发给生成模型（参考图自动带上）</label>
+     <textarea rows="4" spellcheck="false"></textarea>
+     <div class="row">
+       <button class="btn-regen">⟳ 重新生成</button>
+       <span class="cost">约 ¥0.5 / 7–8 分钟</span>
+       <button class="btn-cancel">收起</button>
+     </div>
+     <div class="prog"><div class="bar"></div><div class="ptxt"></div></div>`;
+  ed.querySelector('textarea').value = prompt;
+  ed.querySelector('.btn-regen').onclick = () => regenSeg(anim, ed);
+  ed.querySelector('.btn-cancel').onclick = () => ed.remove();
+  row.after(ed);
+}
+
+async function regenSeg(anim, ed) {
+  if (!CUR_TID) return;
+  const prompt = ed.querySelector('textarea').value.trim();
+  const btn = ed.querySelector('.btn-regen');
+  const prog = ed.querySelector('.prog');
+  const bar = ed.querySelector('.bar');
+  const ptxt = ed.querySelector('.ptxt');
+  btn.disabled = true;
+  prog.classList.add('show');
+  ptxt.textContent = '提交任务中…';
+  bar.style.width = '3%';
+
+  const t0 = Date.now();
+  const ETA = 7.5 * 60 * 1000;   // 实测单段约 7.5 分钟
+  try {
+    const r = await fetch(`/api/regen/${CUR_TID}/${anim}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || '提交失败');
+
+    while (Date.now() - t0 < 15 * 60 * 1000) {
+      await new Promise(res => setTimeout(res, 3000));
+      let t;
+      try { t = await (await fetch('/api/task/' + CUR_TID)).json(); } catch (e) { continue; }
+      const rg = t.regen || {};
+      const el = Math.min(0.95, (Date.now() - t0) / ETA);
+      bar.style.width = (el * 100).toFixed(1) + '%';
+      if (rg.status === 'generating') ptxt.textContent = 'RunningHub 生成中… 已等 ' + ((Date.now() - t0) / 60000).toFixed(1) + ' 分钟';
+      if (rg.status === 'packing') ptxt.textContent = '视频已返回，转码打包中…';
+      if (rg.anim === anim && rg.status === 'done') {
+        bar.style.width = '100%';
+        ptxt.textContent = '完成 ✓ 正在刷新预览';
+        CUR_TASK = t;
+        await loadAndPlay(CUR_TID, t);
+        ptxt.textContent = '完成 ✓ 新片段已就绪';
+        btn.disabled = false;
+        return;
+      }
+      if (rg.anim === anim && rg.status === 'failed') {
+        throw new Error(rg.error || '生成失败');
+      }
+    }
+    throw new Error('等待超时');
+  } catch (e) {
+    ptxt.textContent = '失败：' + e.message;
+    ptxt.className = 'ptxt err';
+    bar.style.width = '0%';
+    btn.disabled = false;
+  }
+}
+
+/* ================= 同步到车机 ================= */
+let syncTid = null;
+
+async function openSync(tid, petName) {
+  syncTid = tid;
+  $('syncSub').textContent = `把「${petName || '这只宠物'}」的资源包推到 ESP32`;
+  $('syncRes').className = 'sync-res';
+  $('syncRes').textContent = '';
+  $('syncMask').classList.add('show');
+  // 用户端不能读 /api/config（管理员专属），设备默认值走单独的轻接口
+  if (!DEVCFG) {
+    try { DEVCFG = (await (await fetch('/api/device-defaults')).json()).device; } catch (e) {}
+  }
+  const dv = DEVCFG || {};
+  $('d_host').value = dv.host || '';
+  $('d_port').value = dv.port || 80;
+  $('d_path').value = dv.path || '/api/pet';
+  $('devHint').innerHTML = dv.host
+    ? '设备地址已保存，改完点「开始同步」会同时存下来'
+    : '还没硬件？填 <b>127.0.0.1</b> / <b>8080</b> / <b>/vdev/api/pet</b> 可以先走虚拟设备自测';
+}
+
+function closeSync() { $('syncMask').classList.remove('show'); }
+$('syncCancel').onclick = closeSync;
+$('syncMask').onclick = e => { if (e.target.id === 'syncMask') closeSync(); };
+$('saveSync').onclick = () => {
+  if (!CUR_TID) return alert('先生成一只宠物');
+  openSync(CUR_TID, CUR_TASK && CUR_TASK.pet_name);
+};
+
+function showSyncRes(html, cls) {
+  const box = $('syncRes');
+  box.className = 'sync-res show' + (cls ? ' ' + cls : '');
+  box.innerHTML = html;
+}
+
+$('devPing').onclick = async () => {
+  const host = $('d_host').value.trim();
+  if (!host) return showSyncRes('请先填设备地址', 'err');
+  showSyncRes('连接中…');
+  const infoPath = (CFG && CFG.device && CFG.device.info_path) || '/api/info';
+  const q = new URLSearchParams({ host, port: $('d_port').value.trim() || '80', path: infoPath });
+  try {
+    const d = await (await fetch('/api/device/ping?' + q)).json();
+    if (!d.ok) return showSyncRes('连接失败：' + esc(d.error || ('HTTP ' + d.http)), 'err');
+    const dv = d.device || {};
+    showSyncRes(`连上了：${esc(dv.name || '未知设备')}　固件 ${esc(dv.fw || '—')}` +
+                (dv.has_pet ? `<br>设备里已有宠物 ${(dv.size / 1048576).toFixed(2)} MB` : '<br>设备里还没有宠物'),
+                'ok');
+  } catch (e) { showSyncRes('请求失败：' + esc(e.message), 'err'); }
+};
+
+$('doSync').onclick = async () => {
+  if (!syncTid) return;
+  const host = $('d_host').value.trim();
+  if (!host) return showSyncRes('请先填设备地址', 'err');
+  const port = $('d_port').value.trim() || '80';
+  const path = $('d_path').value.trim() || '/api/pet';
+  showSyncRes('推送中…资源包正在传给车机，别关页面');
+  $('doSync').disabled = true;
+  try {
+    const r = await fetch('/api/sync/' + syncTid, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host, port, path })
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      showSyncRes('同步失败：' + esc(d.error || ('HTTP ' + d.http)), 'err');
+    } else {
+      const kb = (d.bytes / 1048576).toFixed(2);
+      const v = d.verified === true ? '校验通过 ✓' : (d.verified === false ? '⚠ 校验不一致' : '设备未回传校验值');
+      showSyncRes(`同步成功 · ${kb} MB<br>sha256 ${esc(d.sha256.slice(0, 16))}…<br>${v}`, 'ok');
+    }
+  } catch (e) {
+    showSyncRes('请求失败：' + esc(e.message), 'err');
+  } finally { $('doSync').disabled = false; }
+};
+
+/* ================= 登录与角色（用户端 / 管理员端） ================= */
+let ME = null;
+let DEVCFG = null;   // 设备默认配置：用户端也能读，不含接口密钥等运营信息
+
+function showLogin() {
+  $('loginMask').classList.add('show');
+  $('logoutBtn').style.display = 'none';
+  setTimeout(() => $('loginUser').focus(), 50);
+}
+
+async function doLogin() {
+  const u = $('loginUser').value.trim(), p = $('loginPass').value;
+  $('loginErr').style.display = 'none';
+  if (!u || !p) {
+    $('loginErr').textContent = '请输入账号和密码';
+    $('loginErr').style.display = 'block';
+    return;
+  }
+  $('loginBtn').disabled = true;
+  $('loginBtn').textContent = '登录中…';
+  try {
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || '登录失败');
+    ME = await r.json();
+    applyRole(true);
+  } catch (e) {
+    $('loginErr').textContent = e.message;
+    $('loginErr').style.display = 'block';
+  } finally {
+    $('loginBtn').disabled = false;
+    $('loginBtn').textContent = '登录';
+  }
+}
+
+function applyRole(fresh) {
+  const admin = ME && ME.role === 'admin';
+  $('loginMask').classList.remove('show');
+  $('logoutBtn').style.display = '';
+  // 运营信息（工作流 ID / 余额）只有管理员看得到，用户端一概隐藏
+  $('userPill').style.display = 'inline-flex';
+  $('userText').textContent = (admin ? '管理员 · ' : '') + ME.user;
+  $('modePill').style.display = admin ? '' : 'none';
+  $('balPill').style.display = 'none';
+  $('openAdmin').style.display = admin ? '' : 'none';
+  if (admin) {
+    loadRhStatus();
+    if (fresh) $('roleMask').classList.add('show');
+  }
+  loadGallery();
+}
+
+$('loginBtn').onclick = doLogin;
+$('loginUser').onkeydown = e => { if (e.key === 'Enter') doLogin(); };
+$('loginPass').onkeydown = e => { if (e.key === 'Enter') doLogin(); };
+$('goFront').onclick = () => $('roleMask').classList.remove('show');
+$('goBack').onclick = () => { $('roleMask').classList.remove('show'); openAdminPanel(); };
+
+$('logoutBtn').onclick = async () => {
+  try { await fetch('/api/logout', { method: 'POST' }); } catch (e) {}
+  ME = null; CFG = null; DEVCFG = null;
+  closeDrawer();
+  $('userPill').style.display = 'none';
+  showLogin();
+};
+
+// 启动：先问后端「我是谁」。cookie 还有效就直接进对应角色，否则停在登录页
+(async function boot() {
+  try {
+    const r = await fetch('/api/me');
+    if (r.ok) {
+      ME = await r.json();
+      applyRole(false);
+    } else {
+      showLogin();
+    }
+  } catch (e) {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>

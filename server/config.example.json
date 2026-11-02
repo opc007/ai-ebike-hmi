@@ -1,0 +1,129 @@
+{
+  "server": {
+    "port": 8080
+  },
+  "auth": {
+    "_comment": "用户端/管理员端账号。role=admin 可进后台看接口/余额；role=user 只能用前台。改密码直接改这里。",
+    "accounts": {
+      "admin": {
+        "password": "CHANGE_ME",
+        "role": "admin"
+      },
+      "user": {
+        "password": "CHANGE_ME",
+        "role": "user"
+      }
+    }
+  },
+  "runninghub": {
+    "mode": "auto",
+    "_comment": "全部字段都能在网页右上角「管理设置」里改，改完立即生效，不用重启。",
+    "api_version": "v2",
+    "base_url": "https://www.runninghub.cn",
+    "api_key": "",
+    "workflow_id": "2085393570013474817",
+    "create_path_v2": "/openapi/v2/run/workflow/{{WORKFLOW}}",
+    "create_path_v1": "/task/openapi/create",
+    "status_path": "/task/openapi/status",
+    "outputs_path": "/task/openapi/outputs",
+    "upload_path": "/task/openapi/upload",
+    "instance_type": "default",
+    "use_personal_queue": "false",
+    "poll_interval": 5.0,
+    "timeout_seconds": 900.0,
+    "max_concurrent": 2,
+    "_comment_template": "nodeInfoList。占位符 {{IMAGE_NAME}} = 上传返回的 api/xxx.jpg；{{PROMPT}} = 编译后的提示词；{{ANIM}} = idle/run/brake/talk。nodeId 和 fieldName 必须和你的工作流节点一致，所以在管理面板里填，不写死在代码里。",
+    "node_info_template": [
+      {
+        "nodeId": "3",
+        "fieldName": "image",
+        "fieldValue": "{{IMAGE_NAME}}"
+      },
+      {
+        "nodeId": "22",
+        "fieldName": "prompt",
+        "fieldValue": "{{PROMPT}}"
+      }
+    ],
+    "_comment_prompt": "提示规范：五段固定结构，顺序不能乱（模型对靠前约束更敏感）。前四段全段共享，只有 actions 里的动作每段不同。全部可在管理面板编辑。",
+    "prompt_spec": {
+      "lock": "",
+      "camera": "",
+      "lighting": "",
+      "negative": "",
+      "actions": {
+        "idle": "自然站立待机，身体随呼吸极轻微起伏，偶尔眨眼、耳朵或尾巴小幅摆动，四肢位置基本不动。首尾帧姿势一致，可无缝循环。",
+        "run": "向前奔跑，四肢交替摆动、身体有节奏地上下起伏、尾巴随之摆动。始终朝同一方向，但保持在原地不位移出画（原地跑）。步频均匀，首尾帧处于同一相位，可无缝循环。",
+        "brake": "急刹车，身体因惯性明显前倾，四肢撑地缓冲，随后回弹到站立。动作一次性完成，不循环，结尾停在稳定站姿。",
+        "talk": "张嘴说话，嘴部有节奏开合，头部随语调轻微上下点动，身体保持站立，四肢基本不动。首尾帧嘴型一致，可无缝循环。",
+        "fall": "失去平衡侧向摔倒，随后在地上挣扎起身。动作一次性完成，不循环。",
+        "happy": "开心地摇尾巴并原地小幅跳跃，表情愉悦。首尾帧姿势一致，可无缝循环。",
+        "_default": "自然待机动作，轻微呼吸起伏，首尾帧一致，可无缝循环。"
+      }
+    },
+    "output_spec": {
+      "_comment": "发给工作流的硬性技术参数。若工作流节点支持时长/尺寸入参，用 {{DURATION}} {{SIZE}} 占位。",
+      "duration_seconds": 2,
+      "size": 480,
+      "aspect": "1:1",
+      "fps": 24,
+      "format": "mp4"
+    }
+  },
+  "media": {
+    "_comment": "size 必须与屏幕一致；fps 实测上限 25；jpeg_quality 是 ffmpeg -q:v，越小越清晰也越大。anim_seconds 按段设时长：待机/行驶值得长一点（5 秒），说话/表情 3 秒足够——都是循环播，长了只是白占 PSRAM。",
+    "size": "480",
+    "fps": "12",
+    "jpeg_quality": "11",
+    "max_clip_seconds": "3",
+    "anim_seconds": {
+      "_default": 3,
+      "idle": 5,
+      "run": 5,
+      "brake": 4,
+      "talk": 3,
+      "happy": 3,
+      "fall": 3
+    },
+    "loop_crossfade": 0.12,
+    "budget_mb": "6",
+    "fit": "crop",
+    "crop_focus": "0.35",
+    "trim_start": "0.4"
+  },
+  "generation": {
+    "clip_seconds": 2.0
+  },
+  "anims": {
+    "basic": [
+      "idle",
+      "run",
+      "brake",
+      "talk"
+    ],
+    "full": [
+      "idle",
+      "run",
+      "brake",
+      "talk",
+      "fall",
+      "happy"
+    ],
+    "loop": {
+      "idle": 1,
+      "run": 1,
+      "talk": 1,
+      "happy": 1,
+      "brake": 0,
+      "fall": 0
+    }
+  },
+  "device": {
+    "host": "",
+    "port": 80,
+    "path": "/api/pet",
+    "info_path": "/api/info",
+    "timeout": 90,
+    "_comment": "固件侧需实现 GET /api/info 与 POST /api/pet；没有硬件时把 host 填 127.0.0.1、port 8080、path /vdev/api/pet 走虚拟设备自测"
+  }
+}
