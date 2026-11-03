@@ -13,6 +13,7 @@
 #include "i2c_device.h"
 
 #include <esp_log.h>
+#include <esp_timer.h>
 #include <esp_lcd_panel_vendor.h>
 #include <driver/i2c_master.h>
 #include <driver/spi_master.h>
@@ -97,37 +98,95 @@ static bool s_lvgl_stopped = false;             // 防重复 lvgl_port_stop（�
  *   3) 必须持有 LVGL 锁：esp_lcd_panel_io_spi 的 trans_pool 不是线程安全的，
  *      和 LVGL 并发会报 recycle failed，随后整机卡死。
  * 因为 LVGL 已经被停掉渲染，这里持锁 20~30ms 不会影响任何东西。 */
-#define PET_STRIP_LINES 20
+#define PET_STRIP_LINES 32
+
+/* SPI 驱动的 tx_color 每次进来 acquire_bus、出去 release_bus（要等 DMA 排空），
+ * 也就是每个条带都是一次完整的串行往返。条带行数决定了这个往返次数：
+ * 20 行 = 24 次/帧，32 行 = 15 次/帧，固定开销直接砍掉四成。
+ * 再往上（40 行 = 12 次）双缓冲要吃 75KB 内部 SRAM，和 WiFi/音频抢得紧，
+ * 32 行（60KB）是当前留有余量的最优解。 */
 
 static uint16_t s_pet_strip[2][480 * PET_STRIP_LINES];
 static int s_pet_strip_idx = 0;
 static volatile uint32_t s_pet_frames_sent = 0;
 static uint8_t *s_pack_mem = nullptr;   // 直接从网络加载的资源包（pet_anim 只存指针）
 
+/* 宠物独占屏幕期间，LVGL 的刷新回调被换成这个「只举手不干活」的版本。
+ * 原因：lvgl_port_stop() 只关掉了 LVGL 的 tick 定时器，任务本身还活着；
+ * 而 LVGL 的 flush 完成回调是挂在 panel_io 的 on_color_trans_done 上的，
+ * 宠物每送一条带都会把它「叫醒」。说话时 UI 有脏区，LVGL 就真的去调
+ * draw_bitmap，于是两个写屏方抢同一个 SPI 事务池 → draw_bitmap 里的
+ * spi_device_get_trans_result(portMAX_DELAY) 永远等不到 → 画面定死。
+ * 换成空回调后，LVGL 无论怎么刷都碰不到总线。 */
+static void pet_noop_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
+    (void)area;
+    (void)px_map;
+    lv_display_flush_ready(disp);
+}
+
 static esp_err_t pet_flush_cb(const uint8_t *rgb565, uint16_t w, uint16_t h) {
     if (!s_pet_panel) return ESP_ERR_INVALID_STATE;
     static int dbg_frames = 0;
 
-    if (w > 480) return ESP_ERR_INVALID_ARG;      // 条带缓冲按 480 宽开的
-    if (!lvgl_port_lock(1000)) return ESP_ERR_TIMEOUT;
+    /* 解码器输出 w×h（480×480 原生或 240×240 半分辨率），
+     * 屏幕固定 480×480：半分辨率时做 2x 最近邻放大。
+     * 最近邻是纯写内部 SRAM 的循环（每帧 5.8 万像素），~2ms，可忽略。 */
+    const int SCREEN_W = 480, SCREEN_H = 480;
+    if (w == 0 || h == 0 || SCREEN_W % w != 0) return ESP_ERR_INVALID_ARG;
+    const int scale = SCREEN_W / w;
+    if (scale != 1 && scale != 2) return ESP_ERR_NOT_SUPPORTED;
+
+    if (!lvgl_port_lock(1000)) {
+        pet_dbg_lock_fail = pet_dbg_lock_fail + 1;
+        return ESP_ERR_TIMEOUT;
+    }
 
     esp_err_t err = ESP_OK;
-    const uint16_t lines = (h < PET_STRIP_LINES) ? h : PET_STRIP_LINES;
-    for (int y = 0; y < h; y += lines) {
-        int n = (h - y) < lines ? (h - y) : lines;
+    uint32_t copy_us = 0, draw_us = 0;
+    const int dst_lines = PET_STRIP_LINES;           /* 屏幕方向的条带行数 */
+    const int src_lines = dst_lines / scale;         /* 对应的源行数 */
+    for (int dy = 0; dy < SCREEN_H; dy += dst_lines) {
+        pet_dbg_strip = dy;
+        int sy0 = dy / scale;
+        int n_src = (h - sy0) < src_lines ? (h - sy0) : src_lines;
+        if (n_src <= 0) break;
+        int n_dst = n_src * scale;
         uint16_t *dst = s_pet_strip[s_pet_strip_idx];
         s_pet_strip_idx ^= 1;
-        const uint16_t *src = (const uint16_t *)(rgb565 + (size_t)y * w * 2);
-        for (int i = 0; i < (int)w * n; i++) dst[i] = __builtin_bswap16(src[i]);
-        err = esp_lcd_panel_draw_bitmap(s_pet_panel, 0, y, w, y + n, dst);
+        const uint16_t *src = (const uint16_t *)(rgb565 + (size_t)sy0 * w * 2);
+        int64_t t0 = esp_timer_get_time();
+        if (scale == 1) {
+            /* 原生：解码器已输出大端，纯 memcpy（历史上这里逐像素 bswap16） */
+            memcpy(dst, src, (size_t)w * n_dst * 2);
+        } else {
+            /* 2x 最近邻：一行源像素展开成两行，每像素横向写两次 */
+            for (int r = 0; r < n_src; r++) {
+                const uint16_t *srow = src + (size_t)r * w;
+                uint16_t *d0 = dst + (size_t)(r * 2) * SCREEN_W;
+                uint16_t *d1 = d0 + SCREEN_W;
+                for (int x = 0; x < w; x++) {
+                    uint16_t px = srow[x];
+                    d0[2 * x] = px; d0[2 * x + 1] = px;
+                    d1[2 * x] = px; d1[2 * x + 1] = px;
+                }
+            }
+        }
+        int64_t t1 = esp_timer_get_time();
+        err = esp_lcd_panel_draw_bitmap(s_pet_panel, 0, dy, SCREEN_W, dy + n_dst, dst);
+        int64_t t2 = esp_timer_get_time();
+        copy_us += (uint32_t)(t1 - t0);
+        draw_us += (uint32_t)(t2 - t1);
         if (err != ESP_OK) {
             if (dbg_frames < 10) {
-                ESP_LOGE("pet_dbg", "条带 y=%d err=%s", y, esp_err_to_name(err));
+                ESP_LOGE("pet_dbg", "条带 y=%d err=%s", dy, esp_err_to_name(err));
             }
             break;
         }
     }
     lvgl_port_unlock();
+    /* 滑动平均，去掉单帧抖动 */
+    pet_dbg_copy_us = (pet_dbg_copy_us * 7 + copy_us) / 8;
+    pet_dbg_draw_us = (pet_dbg_draw_us * 7 + draw_us) / 8;
 
     if (err == ESP_OK) s_pet_frames_sent = s_pet_frames_sent + 1;
     if (dbg_frames < 3) {
@@ -238,10 +297,28 @@ static void pet_pull_task(void *arg) {
     ESP_LOGI(TAG, "网络就绪，开始拉包 / 上报");
 
     int tick = 0;
+    uint32_t last_frames = 0;
+    int stall = 0;
     for (;;) {
         pet_anim_set_device_state((int)Application::GetInstance().GetDeviceState());
         pet_anim_report(PET_REPORT_URL);
         pet_anim_fetch_cmd(PET_CMD_URL);
+
+        /* 画面卡死兜底：送屏是在 spi_device_get_trans_result(portMAX_DELAY) 上
+         * 无限等待，一旦 DMA 完成中断丢了，任何软件手段都拉不回来（事务池状态
+         * 已经乱了）。15 秒一帧没送出就重启——比让用户对着冻屏强。 */
+        uint32_t f = pet_frames_sent();
+        if (f == last_frames) {
+            if (++stall >= 3 && pet_anim_is_running()) {
+                ESP_LOGE(TAG, "画面 15 秒无进展（phase=%d strip=%d lockfail=%u），重启恢复",
+                         (int)pet_dbg_phase, (int)pet_dbg_strip, (unsigned)pet_dbg_lock_fail);
+                vTaskDelay(pdMS_TO_TICKS(200));
+                esp_restart();
+            }
+        } else {
+            last_frames = f;
+            stall = 0;
+        }
 
         if (tick % 6 == 0) {
             ESP_LOGI(TAG, "pull: begin (frames=%u)", (unsigned)pet_frames_sent());
@@ -486,8 +563,15 @@ private:
         io_config.cs_gpio_num = EXAMPLE_PIN_NUM_LCD_CS;
         io_config.dc_gpio_num = GPIO_NUM_NC;
         io_config.spi_mode = 0;
+        /* 40 → 80MHz：CO5300 支持 80MHz QSPI，实测带宽只有理论值的十分之一，
+         * 先把这个最直接的旋钮拧到底（如果花屏说明 IO 能力不足，退回 60/40）。 */
+        /* 80MHz 实测会随机挂死 SPI 事务（strip 冻在半路 5 秒~永久），
+           CO5300 手册虽标支持但信号上撑不住，稳定优先回 40MHz。 */
         io_config.pclk_hz = 40 * 1000 * 1000;
-        io_config.trans_queue_depth = 10;
+        /* 原来 10：一次 draw_bitmap 会连发 10 个事务，而我们只有 2 块条带缓冲，
+         * 排在后面的 DMA 读到的是已经被覆盖的数据（花屏），事务池也更容易堵死。
+         * 降到 2 与缓冲数量对齐，tx_color 里会同步等上一个事务回收。 */
+        io_config.trans_queue_depth = 2;
         io_config.lcd_cmd_bits = 32;
         io_config.lcd_param_bits = 8;
         io_config.flags.quad_mode = true;
@@ -643,6 +727,8 @@ private:
                 int hidden = 0;
                 for (lv_display_t *dp = lv_display_get_next(NULL); dp;
                      dp = lv_display_get_next(dp)) {
+                    /* 摘掉刷新回调：LVGL 后续的脏区刷新不再写 QSPI */
+                    lv_display_set_flush_cb(dp, pet_noop_flush);
                     lv_obj_t *scr = lv_display_get_screen_active(dp);
                     if (!scr) continue;
                     uint32_t n = lv_obj_get_child_count(scr);

@@ -143,9 +143,23 @@ typedef struct {
     int frame;
     int frame_count;
     uint32_t frames;         /* 累计已送出的画面帧数：涨不动说明播放任务卡了 */
+    int phase;               /* 播放任务当前阶段：0=调度 1=解码 2=送屏 3=完成 */
+    int strip;               /* 送屏进行到的条带 y（-1 表示没在送屏） */
 } pet_anim_status_t;
 
 void pet_anim_get_status(pet_anim_status_t *out);
+
+/* 联调诊断变量（定义在 pet_anim.c）。板级 flush 往里写条带进度，
+ * 播放卡死时回读 status 就能判断卡在解码还是送屏。 */
+extern volatile uint8_t pet_dbg_phase;
+extern volatile int32_t pet_dbg_strip;
+extern volatile uint32_t pet_dbg_lock_fail;
+extern volatile uint32_t pet_dbg_decode_us;   /* 单帧 JPEG 解码耗时（滑动平均） */
+extern volatile uint32_t pet_dbg_flush_us;    /* 单帧送屏耗时（滑动平均） */
+/* 送屏再拆两段，好区分是「CPU 拷内存慢」还是「SPI 真发得慢」：
+ * copy_us 是 RGB 逐条带搬进内部 SRAM 的累计，draw_us 是 draw_bitmap 的累计。 */
+extern volatile uint32_t pet_dbg_copy_us;
+extern volatile uint32_t pet_dbg_draw_us;
 
 /* IMU 是否已完成静止标定 */
 bool pet_imu_is_calibrated(void);

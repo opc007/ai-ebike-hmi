@@ -420,11 +420,13 @@ esp_err_t pet_anim_report(const char *report_url) {
     pet_anim_status_t st;
     pet_anim_get_status(&st);
 
-    char json[256];
+    char json[384];
     snprintf(json, sizeof(json),
              "{\"anim\":\"%s\",\"motion\":%d,\"talking\":%s,"
              "\"emotion\":%d,\"state\":%d,\"sigma\":%.4f,"
              "\"frame\":%d,\"frame_count\":%d,\"frames\":%u,"
+             "\"phase\":%d,\"strip\":%d,\"lockfail\":%u,"
+             "\"dec_us\":%u,\"fl_us\":%u,\"copy_us\":%u,\"draw_us\":%u,"
              "\"running\":%s,\"free_psram\":%u}",
              st.anim ? st.anim : "-",
              (int)st.motion,
@@ -433,6 +435,9 @@ esp_err_t pet_anim_report(const char *report_url) {
              st.device_state,
              st.sigma,
              st.frame, st.frame_count, (unsigned)st.frames,
+             st.phase, st.strip, (unsigned)pet_dbg_lock_fail,
+             (unsigned)pet_dbg_decode_us, (unsigned)pet_dbg_flush_us,
+             (unsigned)pet_dbg_copy_us, (unsigned)pet_dbg_draw_us,
              pet_anim_is_running() ? "true" : "false",
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 

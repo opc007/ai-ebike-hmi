@@ -15,7 +15,7 @@
 #include <string.h>
 
 #include "esp_heap_caps.h"
-#include "jpeg_decoder.h"
+#include "esp_jpeg_dec.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -38,8 +38,11 @@ typedef struct {
     pet_anim_config_t cfg;
     pet_pack_t pack;
     uint8_t *pack_buf;     /* 自己加载时的内存（PSRAM） */
-    uint8_t *rgb;          /* 解码输出缓冲 */
+    uint8_t *rgb;          /* 解码输出缓冲（show_test 用） */
     size_t rgb_size;
+    void *njd;             /* esp_new_jpeg 解码器句柄（复用，随包创建） */
+    uint8_t *nj_out;       /* 解码输出（16 字节对齐，RGB565_BE） */
+    int nj_out_len;        /* 当前 outbuf 容量 */
     uint16_t w, h;
     uint8_t fps;
 
@@ -60,6 +63,18 @@ typedef struct {
 } ctx_t;
 
 static ctx_t s_ctx;
+
+/* 联调诊断：播放任务卡死时，靠这几个值判断卡在哪一步（板级 flush 也会写 strip）。
+ * phase: 0=调度 1=JPEG 解码 2=送屏中 3=本帧完成 */
+volatile uint8_t pet_dbg_phase = 0;
+volatile int32_t pet_dbg_strip = -1;
+volatile uint32_t pet_dbg_lock_fail = 0;
+/* 单帧耗时拆解（指数平均，单位微秒）：判断瓶颈在解码还是送屏 */
+volatile uint32_t pet_dbg_decode_us = 0;
+volatile uint32_t pet_dbg_flush_us = 0;
+/* 送屏再拆两段：memcpy 进内部 SRAM 的累计 / draw_bitmap 的累计 */
+volatile uint32_t pet_dbg_copy_us = 0;
+volatile uint32_t pet_dbg_draw_us = 0;
 
 /* pet_imu.c 里的状态机用这个名字，避免与公开接口重名 */
 esp_err_t pet_imu_calibrate(uint32_t ms);
@@ -127,31 +142,70 @@ static void set_emo(const char *key, const char *anim, uint32_t hold_ms) {
 }
 
 static esp_err_t decode_and_flush(const uint8_t *jpg, uint32_t len) {
-    esp_jpeg_image_cfg_t cfg = {
-        .indata = (uint8_t *)jpg,
-        .indata_size = len,
-        .outbuf = s_ctx.rgb,
-        .outbuf_size = s_ctx.rgb_size,
-        .out_format = JPEG_IMAGE_FORMAT_RGB565,
-        .out_scale = JPEG_IMAGE_SCALE_0,
-        /* 字节序由板级 flush 统一做 bswap（小智 LVGL 的 swap_bytes=1 同款），
-           这里保持解码器原始输出，避免两处都换导致颜色反转。 */
-        .flags.swap_color_bytes = 0,
+    jpeg_dec_io_t io = {
+        .inbuf = (uint8_t *)jpg,
+        .inbuf_len = (int)len,
     };
-    esp_jpeg_image_output_t out;
-    esp_err_t err = esp_jpeg_decode(&cfg, &out);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "jpeg decode fail: %s", esp_err_to_name(err));
-        return err;
+    jpeg_dec_header_info_t info;
+    pet_dbg_phase = 1;
+    int64_t t_dec0 = esp_timer_get_time();
+
+    jpeg_error_t e = jpeg_dec_parse_header(s_ctx.njd, &io, &info);
+    if (e != JPEG_ERR_OK) {
+        ESP_LOGW(TAG, "jpeg parse header fail: %d", (int)e);
+        pet_dbg_phase = 0;
+        return ESP_FAIL;
     }
-    /* 前 5 帧打印解码尺寸：和包头（480x480）对不上就是错位的来源 */
+    int out_len = 0;
+    if (jpeg_dec_get_outbuf_len(s_ctx.njd, &out_len) != JPEG_ERR_OK || out_len <= 0) {
+        ESP_LOGW(TAG, "jpeg outbuf len fail");
+        pet_dbg_phase = 0;
+        return ESP_FAIL;
+    }
+    /* 输出缓冲按需扩：480x480 RGB565_BE = 460800B，半分辨率只要 1/4 */
+    if (out_len > s_ctx.nj_out_len || !s_ctx.nj_out) {
+        void *nb = heap_caps_aligned_alloc(16, out_len, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (!nb) nb = heap_caps_aligned_alloc(16, out_len, MALLOC_CAP_8BIT);
+        if (!nb) {
+            ESP_LOGE(TAG, "解码输出缓冲分配失败（%d 字节）", out_len);
+            pet_dbg_phase = 0;
+            return ESP_ERR_NO_MEM;
+        }
+        if (s_ctx.nj_out) heap_caps_free(s_ctx.nj_out);
+        s_ctx.nj_out = nb;
+        s_ctx.nj_out_len = out_len;
+        ESP_LOGI(TAG, "解码输出缓冲 %d 字节", out_len);
+    }
+    io.outbuf = s_ctx.nj_out;
+    io.out_size = out_len;
+
+    int count = 1;
+    jpeg_dec_get_process_count(s_ctx.njd, &count);
+    for (int i = 0; i < count; i++) {
+        e = jpeg_dec_process(s_ctx.njd, &io);
+        if (e != JPEG_ERR_OK) {
+            ESP_LOGW(TAG, "jpeg decode fail: %d", (int)e);
+            pet_dbg_phase = 0;
+            return ESP_FAIL;
+        }
+    }
+    int64_t t_dec1 = esp_timer_get_time();
+
+    /* 前 5 帧打印解码尺寸：和包头对不上就是错位的来源 */
     if (s_ctx.frames_sent < 5) {
         ESP_LOGW(TAG, "帧#%u 解码 %ux%u（包头 %ux%u）",
-                 (unsigned)s_ctx.frames_sent, out.width, out.height,
+                 (unsigned)s_ctx.frames_sent, info.width, info.height,
                  s_ctx.w, s_ctx.h);
     }
-    esp_err_t rc = s_ctx.cfg.flush(s_ctx.rgb, out.width, out.height);
+    pet_dbg_phase = 2;
+    pet_dbg_strip = -1;
+    esp_err_t rc = s_ctx.cfg.flush(io.outbuf, info.width, info.height);
+    int64_t t_fl1 = esp_timer_get_time();
     if (rc == ESP_OK) s_ctx.frames_sent++;
+    /* 8 帧滑动平均，避免单帧抖动干扰判断 */
+    pet_dbg_decode_us = (pet_dbg_decode_us * 7 + (uint32_t)(t_dec1 - t_dec0)) / 8;
+    pet_dbg_flush_us = (pet_dbg_flush_us * 7 + (uint32_t)(t_fl1 - t_dec1)) / 8;
+    pet_dbg_phase = 3;
     return rc;
 }
 
@@ -161,6 +215,8 @@ static void play_task(void *arg) {
     const int64_t frame_us = 1000000 / (s_ctx.fps ? s_ctx.fps : 20);
 
     while (s_ctx.running) {
+        pet_dbg_phase = 0;
+        pet_dbg_strip = -1;
         pet_motion_t motion = pet_anim_get_motion();
         const char *want = anim_name_for(motion, s_ctx.talking);
 
@@ -301,6 +357,19 @@ esp_err_t pet_anim_load_pack_mem(const uint8_t *data, size_t len) {
         return ESP_ERR_NO_MEM;
     }
     s_ctx.rgb_size = need;
+
+    /* esp_new_jpeg 解码器：比 TJpgDec（esp_jpeg/ROM 版）快，且直接输出
+       RGB565_BE（屏要的大端），省掉整个颜色转换环节。
+       句柄随包复用；输出缓冲 16 字节对齐、首次用时按需扩。 */
+    if (!s_ctx.njd) {
+        jpeg_dec_config_t dcfg = DEFAULT_JPEG_DEC_CONFIG();
+        dcfg.output_type = JPEG_PIXEL_FORMAT_RGB565_BE;
+        if (jpeg_dec_open(&dcfg, &s_ctx.njd) != JPEG_ERR_OK) {
+            ESP_LOGE(TAG, "esp_new_jpeg 打开失败");
+            return ESP_FAIL;
+        }
+        ESP_LOGI(TAG, "esp_new_jpeg 解码器就绪（RGB565_BE）");
+    }
 
     ESP_LOGI(TAG, "资源包已加载 %ux%u @%ufps，%u 段，%.2f MB", s_ctx.w, s_ctx.h,
              s_ctx.fps, s_ctx.pack.anim_count, s_ctx.pack.size / 1048576.0f);
@@ -485,6 +554,8 @@ void pet_anim_get_status(pet_anim_status_t *out) {
     out->sigma = pet_imu_last_sigma();
     out->frame = s_ctx.cur_frame;
     out->frames = s_ctx.frames_sent;
+    out->phase = pet_dbg_phase;
+    out->strip = pet_dbg_strip;
     if (s_ctx.cur_anim >= 0 && s_ctx.cur_anim < s_ctx.pack.anim_count) {
         const pet_pack_anim_t *a = &s_ctx.pack.anims[s_ctx.cur_anim];
         out->anim = a->name;
